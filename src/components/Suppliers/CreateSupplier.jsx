@@ -4,26 +4,52 @@ import React, { useEffect, useState } from 'react'
 const Invoice = () => {
     const baseUrl="http://localhost/Restaurant_management_home/admin/";
     const [suppliers,setSuppliers]=useState([]);
-    const[selectSuppliers,setSelectSuppliers]=useState(null)
+    const[selectSuppliers,setSelectSuppliers]=useState(null);
+    // const [purchaseId,SetPurchaseId]=useState([]);
+    const [items,setItems]=useState([]);
 
 
-    const handleSupplierChange=(e)=>{
-        const{value}=e.target
-        setSelectSuppliers(JSON.parse(value))
-    }
+
+    
 
 
     const fetchSuppliers=()=>{
         axios.get(baseUrl+"api/supplier/")
         .then((res)=>{
-             console.log(res);
+            //  console.log(res);
             setSuppliers(res.data.suppliers);
         })
     }
 
+    const handleSupplierChange=(e)=>{
+      const{value}=e.target
+      setSelectSuppliers(JSON.parse(value))
+  }
+
+    // const fetchpurchseId=()=>{
+    //   axios.get(baseUrl+"api/purchase/get_last_id")
+    //   .then((res)=>{
+    //     console.log(res)
+    //     SetPurchaseId(res.data.purchases)
+    //   })
+    // }
+
+    const fetchItems=()=>{
+      axios.get(baseUrl+"api/item/")
+      .then((res)=>{
+          // console.log(res.data.items);
+          setItems(res.data.items);
+      })
+      .catch((err)=>{
+        console.log(err);
+        
+      })
+    }
 
     useEffect(()=>{
         fetchSuppliers()
+        // fetchpurchseId()
+        fetchItems()
     },[])
 
   return (
@@ -52,20 +78,16 @@ const Invoice = () => {
               <p className="mb-1">Phone: {selectSuppliers && selectSuppliers.mobile}<span id="phone"></span></p>
               <p>Address: {selectSuppliers && selectSuppliers.address}<span id="email"></span></p>
             </div>
-            <div className="col-md-4">
-              <h5>Warehouse</h5>
-              <select className="form-select">
-                <option>Select Warehouse</option>
-                {/* Options would be dynamically populated */}
-              </select>
-            </div>
-            <div className="col-md-4">
+            
+
+            <div className="col-md-4 text-end" >
               <h5>Invoice Details</h5>
+
               <p>Invoice No: <strong>#12345</strong></p>
               <p>Date: <strong>{new Date().toLocaleDateString()}</strong></p>
               <div>
                 Delivery Date:
-                <input type="date" className="form-control mt-1" />
+                <input type="date" className="form-control mt-1 text-end" style={{ width: "auto", marginLeft: "auto" }} />
               </div>
             </div>
           </div>
@@ -85,7 +107,11 @@ const Invoice = () => {
                 <td>
                   <select className="form-select">
                     <option>Select Product</option>
-                    {/* Options would be dynamically populated */}
+                    {items?.map((data,i)=>{
+                      return(
+                        <option value={JSON.stringify(data)} key={data.id}>{data.name}</option>
+                      )
+                    })}
                   </select>
                 </td>
                 <td><input type="number" className="form-control" placeholder="Qty" /></td>
