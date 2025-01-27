@@ -1,4 +1,5 @@
 import React from 'react'
+import { NavLink } from 'react-router-dom'
 
 const Sidebar = () => {
   return (
@@ -19,7 +20,8 @@ const Sidebar = () => {
               <span className="nav-text">Customer</span>
             </a>
               <ul aria-expanded="false">
-                <li><a href="<?php echo $base_url?>/customer">Customer Details</a></li>
+                {/* <li><a href="/customer">Customer Details</a></li> */}
+                <li><NavLink to="/customer">Customer Details</NavLink></li>
               </ul>
             </li>
 
@@ -44,7 +46,7 @@ const Sidebar = () => {
               <span className="nav-text">Employee</span>
             </a>
               <ul aria-expanded="false">
-                <li><a href="<?php echo $base_url?>/employee">Employee Details</a></li>
+                <li><NavLink to="/employee">Employee Details</NavLink></li>
               </ul>
             </li>
 

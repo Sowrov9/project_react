@@ -1,82 +1,28 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react'
-import Cart from './../../cartComponent/Cart';
+import Cart from '../../cartComponent/Cart';
+import { toast } from 'react-toastify';
 
 
 
 const Invoice = () => {
   const baseUrl = "http://localhost/Restaurant_management_home/admin/";
-  const cart = Cart("purchases")
+  // const cart = Cart("purchases")
   const [suppliers, setSuppliers] = useState([]);
   const [selectSuppliers, setSelectSuppliers] = useState(null);
   const [product, setProduct] = useState([])
-  // const [purchaseId,SetPurchaseId]=useState([]);
-  const [summaryCount, setSummaryCount] = useState({
-    discount: 0,
-    tax: 0,
-    subtotal: 0,
-    total: 0
-  })
-  const [item, setItem] = useState({
-    name: "",
-    item_id: 0,
-    qty: 0,
-    price: 0,
-    subtotal: 0
-  })
-  const [items, setItems] = useState([cart.getCart()]);
+  // 1-27-2025
+  const [cart, setCart] = useState(() => {
+    const savedCart = localStorage.getItem("cartProducts");
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
+  const [data,setData] = useState({product:"", price:"",qty: ""})
+  const [subTotal,setSubTotal] = useState(0)
 
-  const handleSetItem = (e) => {
-    const { name, value } = e.target
-    if (name == "product") {
-      let productData = JSON.parse(value)
-      setItem((prev) => ({
-        ...prev,
-        name: productData.name,
-        item_id: productData.id,
-        qty: 0,
-        price: productData.price,
-        subtotal: productData.price
-      }))
-    }
-
-    if (name == "price") {
-      setItem((prev) => ({
-        ...prev,
-        price: value,
-        subtotal: prev.price
-      }))
-    }
-
-    if (name == "qty") {
-      setItem((prev) => ({
-        ...prev,
-        qty: value,
-        subtotal: prev.price * value
-      }))
-
-    }
+  const handleChange = e =>{
+    const {name,value} = e.target;
+    setData({...data, [name]: value});
   }
-
-  const handleSetAllItem = (e) => {
-    // console.log(item);
-    cart.save(item)
-    setItems(cart.getCart())
-    setItem({
-      name: "",
-      item_id: 0,
-      qty: 1,
-      price: 0,
-      subtotal: 0,
-      total_discount: 0
-    })
-  }
-
-  // setItem((prev) => ({
-  //   ...prev,
-  //   [name]:value, 
-  // }))
-
 
 
 const fetchSuppliers = () => {
@@ -87,18 +33,58 @@ const fetchSuppliers = () => {
     })
 }
 
+// Handle Add to cart
+const handleAdd = e=>{
+  e.preventDefault();
+  setCart([...cart, data]);
+  setData({product:"", price:"",qty: ""})
+}
+useEffect(() => {
+  localStorage.setItem("cartProducts", JSON.stringify(cart));
+}, [cart]);
+
+
+const calculatePrice = arr =>{
+  const subTotal = arr.reduce((prev,cur)=> prev + parseInt(cur.price), 0)
+  return subTotal;
+}
+
+useEffect(()=>{
+  const calculatePrice = () =>{
+    const subTotal = cart.reduce((prev,cur)=> prev + parseInt(cur.price * cur.qty), 0)
+    setSubTotal(subTotal)
+  }
+  calculatePrice();
+},[cart])
+
 const handleSupplierChange = (e) => {
   const { value } = e.target
   setSelectSuppliers(JSON.parse(value))
 }
 
-// const fetchpurchseId=()=>{
-//   axios.get(baseUrl+"api/purchase/get_last_id")
-//   .then((res)=>{
-//     console.log(res)
-//     SetPurchaseId(res.data.purchases)
-//   })
-// }
+const handleProcess = async(e) => {
+  e.preventDefault();
+  const purchaseData = {
+    supplier_id: selectSuppliers?.id,
+    total_amount: (subTotal + subTotal * 0.05),
+    purchase_date: new Date()
+  }
+  const response = await axios.post('http://localhost/Restaurant_management_home/admin/api/purchase/save',purchaseData);
+  // console.log(response)
+ if(response.data.success == 'yes'){
+  localStorage.clear()
+  setCart([])
+  toast.success("Purchase successfully done!")
+ }
+}
+
+// Handle Clear
+const handleClearAll = ()=> {
+  setCart([]);
+    localStorage.clear();
+}
+
+
 
 const fetchProduct = () => {
   axios.get(baseUrl + "api/item/")
@@ -114,7 +100,6 @@ const fetchProduct = () => {
 
 useEffect(() => {
   fetchSuppliers()
-  // fetchpurchseId()
   fetchProduct()
 }, [])
 
@@ -130,7 +115,7 @@ return (
           <div className="row mb-4">
             <div className="col-md-4">
               <h5>Supplier</h5>
-              <select onChange={handleSupplierChange} className="form-select mb-2">
+              <select onChange={handleSupplierChange} name='supplier' className="form-select mb-2">
                 <option>Select Supplier</option>
                 {
                   suppliers?.map((data, index) => {
@@ -166,52 +151,55 @@ return (
                 <th>Quantity</th>
                 <th>Unit Price</th>
                 <th>Total</th>
+                <th>Action</th>
                 {/* <th><button onClick={handleDeleteAllItems} className="btn btn-warning">DeleteAll</button></th> */}
               </tr>
               <tr>
                 <td>
-                  <select onChange={handleSetItem} name='product' className="form-select">
+                  <select onChange={handleChange} name='product' className="form-select">
                     <option>Select Product</option>
                     {product?.map((data, i) => {
                       return (
-                        <option value={JSON.stringify(data)} key={data.id}>{data.name}</option>
+                        <option value={data.name} key={data.id}>{data.name}</option>
                       )
                     })}
                   </select>
                 </td>
-                <td><input onChange={handleSetItem} type="number" name='qty' className="form-control" placeholder="Qty" /></td>
-                <td><input onChange={handleSetItem} type="number" name='price' className="form-control" placeholder="Price" /></td>
+                <td><input onChange={handleChange} type="number" name='qty' value={data.qty} className="form-control" placeholder="Qty" /></td>
+                <td><input onChange={handleChange} type="number" name='price' value={data.price} className="form-control" placeholder="Price" /></td>
 
-                <td>-</td>
+                <td>{data.qty ? data.qty * data.price : 0}</td>
                 <td>
-                  <button onClick={handleSetAllItem} className="btn btn-info">Add</button>
+                  <button onClick={handleAdd} className="btn btn-info">Add</button>
                 </td>
               </tr>
             </thead>
             <tbody id="data_append">
               {
-
+                cart.length > 0 && cart.map(item=>(
+                  <tr key={item.item_id}>
+                      <td>{item.product}</td>
+                      <td>{item.qty}</td>
+                      <td>{item.price}</td>
+                      <td>{item.qty && item.qty * item.price}</td>
+                  </tr>
+                ))
               }
             </tbody>
             <tfoot>
-              <tr>
-                <td colSpan="4" className="text-end">Discount</td>
-                <td>$0.00</td>
+            <tr>
+                <td colSpan="3" className="text-end">Subtotal</td>
+                <td>&#2547;{subTotal}</td>
                 <td></td>
               </tr>
               <tr>
-                <td colSpan="4" className="text-end">Tax</td>
-                <td>$0.00</td>
+                <td colSpan="3" className="text-end">Tax</td>
+                <td>&#2547;{subTotal * 0.05}</td>
                 <td></td>
               </tr>
               <tr>
-                <td colSpan="4" className="text-end">Subtotal</td>
-                <td>$0.00</td>
-                <td></td>
-              </tr>
-              <tr>
-                <td colSpan="4" className="text-end fw-bold">Total</td>
-                <td className="fw-bold">$0.00</td>
+                <td colSpan="3" className="text-end fw-bold">Total</td>
+                <td className="fw-bold">&#2547;{subTotal + (subTotal * 0.05)}</td>
                 <td></td>
               </tr>
             </tfoot>
@@ -219,8 +207,8 @@ return (
 
           {/* Footer Actions */}
           <div className="d-flex justify-content-between mt-4">
-            <button className="btn btn-danger">Clear All</button>
-            <button className="btn btn-success">Process</button>
+            <button onClick={handleClearAll} className="btn btn-danger">Clear All</button>
+            <button onClick={handleProcess} className="btn btn-success">Process</button>
           </div>
         </div>
       </div>
@@ -229,7 +217,6 @@ return (
 
   </>
 )
-}
 }
 
 export default Invoice
